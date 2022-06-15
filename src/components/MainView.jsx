@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import axios from 'axios';
-import { TextField, Button, Modal } from '@material-ui/core';
+import { Button, IconButton, Modal, Input } from '@material-ui/core';
 import { CircularProgress } from '@material-ui/core';
 import { Paper, Box } from '@material-ui/core';
 import Table from '@material-ui/core/Table';
@@ -11,114 +11,135 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import Autocomplete from '@material-ui/lab/Autocomplete';
 
 import CharDetails from './CharDetails';
 
-const useStyles = makeStyles((theme) => ({}));
+const useStyles = makeStyles((theme) => ({
+	search: {
+		position: 'relative',
+		borderRadius: theme.shape.borderRadius,
+		backgroundColor: theme.palette.common.white,
+		'&:hover': {
+			backgroundColor: theme.palette.common.white,
+		},
+		marginRight: theme.spacing(2),
+		marginLeft: 0,
+		width: '100%',
+		[theme.breakpoints.up('sm')]: {
+			marginLeft: theme.spacing(3),
+			width: 'auto',
+		},
+	},
+	pagination: {},
+}));
 
 function MainView() {
 	const classes = useStyles();
-	let [pageNumber, setPageNumber] = useState(1);
+
 	const [loading, setLoading] = useState(false);
-	let [idsArr, setIdsArr] = useState(0);
-	let [autocompList, setAutocompList] = useState([]);
 	let [characterList, setCharacterList] = useState([]);
 	let [selectedCharacter, setSelectedCharacter] = useState(null);
 	const [open, setOpen] = useState(false);
 
+	let [pageNumber, setPageNumber] = useState(1);
+	let [pageUp, setPageUp] = useState(null);
+	let [pageDown, setPageDown] = useState(null);
+
 	useEffect(() => {
 		getCharacters();
-		getAutData();
-	}, []);
+	}, [pageNumber]);
 
 	const getCharacters = async () => {
-		let totalIds = 1;
-		let range = [];
 		try {
 			const response = await axios.get(
 				`https://rickandmortyapi.com/api/character/?page=${pageNumber}`
 			);
-			totalIds = response.data.info.count;
-			range = Array.from({ length: totalIds }, (_, i) => i + 1);
-			setIdsArr(range);
-			setCharacterList(response.data.results);
+			setCharacterList(response.data);
+			setLoading(true);
 		} catch {
-			console.log('error con la api');
+			console.log('API error');
 		}
 	};
-
-	const getAutData = async () => {
-		let autocomp = [];
-		try {
-			const response = await axios.get(
-				`https://rickandmortyapi.com/api/character/${idsArr}`
-			);
-			for (let item of response.data) {
-				autocomp.push(item.name);
-			}
-			setAutocompList(autocomp);
-		} catch {
-			console.log('error con el autocomplete');
+	const handlePageUp = async () => {
+		console.log('pageup ran', pageUp);
+		if (pageUp) {
+			const response = await axios.get(`${pageUp}`);
+			setCharacterList(response.data);
+			response.data.info.next
+				? setPageUp(response.data.info.next)
+				: setPageUp(null);
 		}
 	};
-	const filteredCharacters = async (char) => {
-		let filteredList = characterList.filter((element) => {
-			let elementName = element.name.toUpperCase();
-			let character = char.toUpperCase();
-			if (elementName.includes(character)) {
-				return element;
+	const handlePageDown = async () => {
+		if (pageDown) {
+			const response = await axios.get(`${pageDown}`);
+			setCharacterList(response.data);
+			response.data.info.prev
+				? setPageDown(response.data.info.prev)
+				: setPageDown(null);
+		}
+	};
+	const filteredCharacters = async (event) => {
+		event.preventDefault();
+		let charToSearch = event.target[0].value;
+		console.log('event', event.target[0].value);
+		if (charToSearch) {
+			try {
+				const response = await axios.get(
+					`https://rickandmortyapi.com/api/character/?name=${charToSearch}`
+				);
+				response.data.info.next
+					? setPageUp(response.data.info.next)
+					: setPageUp(null);
+				response.data.info.prev
+					? setPageDown(response.data.info.prev)
+					: setPageDown(null);
+				setCharacterList(response.data);
+			} catch {
+				console.log('search error');
 			}
-			return null;
-		});
-		console.log(filteredList);
-		setCharacterList(filteredList);
+		}
 	};
 	const SearchBar = () => {
-		// aca se renderiza la searchbar y todo lo del autocomplete
 		return (
-			<div className={classes.input}>
-				<Autocomplete
-					disablePortal
-					id="char-autocomplete"
-					getOptionLabel={(autocomp) => {
-						return `${autocomp}`;
-					}}
-					options={autocompList}
-					noOptionsText={'No characters found'}
-					renderInput={(params) => (
-						<div style={{ display: 'flex' }}>
-							<TextField
-								size="fullWidth"
-								variant="outlined"
-								{...params}
-								label="Search characters"
-								placeholder="Enter a character name"
-							/>
-							<Button
-								style={{
-									padding: 15,
-									paddingLeft: 30,
-									paddingRight: 30,
-									marginLeft: 5,
-									background: '#0794E3',
-									color: '#FAFAFA',
-									boxShadow: 'none',
-								}}
-								variant="contained"
-								onClick={() => {
-									filteredCharacters(params.inputProps.value);
-								}}
-							>
-								Search
-							</Button>
-						</div>
-					)}
-				/>
+			<div className={classes.search}>
+				<form onSubmit={filteredCharacters}>
+					<Input
+						placeholder="Search…"
+						className={classes.inputRoot}
+					/>
+				</form>
 			</div>
 		);
 	};
+	const Pagination = () => {
+		let pageNumbersArr = Array.from(
+			{ length: characterList.info.pages },
+			(_, i) => i + 1
+		);
+		if (pageNumbersArr.length > 40) {
+			//mejorar como diferenciar entre la lista por defecto y una busqueda personalizada
+			//para no mostrar los numeros de la paginacion ya que la api no permite ingresar un
+			//parametro de busqueda con un numer de pagina al mismo tiempo
 
+			return (
+				<React.Fragment>
+					{pageNumbersArr.map((item) => (
+						<IconButton
+							className={classes.pageNumber}
+							size="small"
+							key={item}
+							onClick={() => setPageNumber(item)}
+						>
+							{item}
+						</IconButton>
+					))}
+				</React.Fragment>
+			);
+		} else {
+			return null;
+		}
+	};
 	const TableComponent = () => {
 		return (
 			<React.Fragment>
@@ -135,7 +156,7 @@ function MainView() {
 							</TableRow>
 						</TableHead>
 						<TableBody>
-							{characterList.map((row) => (
+							{characterList.results.map((row) => (
 								<TableRow key={row.id}>
 									<TableCell component="th" scope="row">
 										{row.name}
@@ -153,21 +174,19 @@ function MainView() {
 										{row.episode.length}
 									</TableCell>
 									<TableCell align="right">
-										<button onClick={() => handleOpen(row)}>
+										<Button onClick={() => handleOpen(row)}>
 											detalles
-										</button>
+										</Button>
 									</TableCell>
 								</TableRow>
 							))}
 						</TableBody>
 					</Table>
-					<Button
-						onClick={
-							((pageNumber = 1), console.log('page', pageNumber))
-						}
-					>
-						1
-					</Button>
+					<div className={classes.pagination}>
+						<Button onClick={handlePageDown}>pageDown</Button>
+						<Pagination />
+						<Button onClick={handlePageUp}>pageUp</Button>
+					</div>
 				</TableContainer>
 			</React.Fragment>
 		);
@@ -186,17 +205,22 @@ function MainView() {
 	return (
 		<Box className={classes.MainView}>
 			<p>rick and morty characters</p>
-
 			<Box>
-				<SearchBar />
-				<TableComponent />
-				<Modal
-					className={classes.modal}
-					open={open}
-					onClose={handleClose}
-				>
-					<ModalDisplay />
-				</Modal>
+				{loading ? (
+					<Box>
+						<SearchBar />
+						<TableComponent />
+						<Modal
+							className={classes.modal}
+							open={open}
+							onClose={handleClose}
+						>
+							<ModalDisplay />
+						</Modal>
+					</Box>
+				) : (
+					<CircularProgress style={{ marginTop: 40 }} />
+				)}
 			</Box>
 		</Box>
 	);
