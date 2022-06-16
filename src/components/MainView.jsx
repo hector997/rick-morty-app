@@ -1,6 +1,7 @@
 import React from 'react';
+import '../App.css';
 import { useState, useEffect } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import { withStyles, makeStyles } from '@material-ui/core/styles';
 import axios from 'axios';
 import { Button, IconButton, Modal, Input } from '@material-ui/core';
 import { CircularProgress } from '@material-ui/core';
@@ -13,54 +14,142 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 
 import CharDetails from './CharDetails';
+import SearchIcon from '@material-ui/icons/Search';
+import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
+import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
+import VisibilityOutlinedIcon from '@material-ui/icons/VisibilityOutlined';
+import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
 
 const useStyles = makeStyles((theme) => ({
 	MainView: {
 		position: 'absolute',
 		width: '100%',
 		backgroundColor: '#0A222D',
+		paddingTop: 30,
+	},
+	appTitle: {
+		color: '#00DFDD',
+		fontFamily: 'Montserrat',
+		fontSize: 40,
+		fontWeight: 400,
 	},
 	form: {
-		width: '20%',
 		padding: 20,
+		display: 'flex',
+		alignItems: 'center',
+	},
+	input: {
+		color: '#00DFDD',
+		fontSize: 28,
+		fontWeight: 400,
+	},
+	inputIcon: {
+		color: '#00DFDD',
+		marginRight: 10,
+		fontSize: 35,
 	},
 	search: {
 		position: 'relative',
-		left: 0,
-		borderRadius: theme.shape.borderRadius,
+		display: 'flex',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		maxWidth: '80%',
+		paddingLeft: '8%',
 		[theme.breakpoints.up('sm')]: {
 			marginLeft: theme.spacing(3),
 			width: 'auto',
 		},
 	},
 	tableWrap: {
-		width: '95%',
+		width: '90%',
 		margin: 'auto',
 		background: '#C4C4C480',
 		borderRadius: 10,
 		'& $table': {
 			background: '#C4C4C40',
-			width: '95%',
+			width: '90%',
 			marginTop: 20,
 			margin: 'auto',
 		},
+	},
+	tableWrapError: {
+		width: '90%',
+		margin: 'auto',
+		background: '#C4C4C480',
+		borderRadius: 10,
+		height: '1000px',
+		display: 'flex',
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	searchError: {
+		paddingLeft: 10,
+		color: '#FAFAFA',
+		fontSize: 30,
+		fontFamily: 'Montserrat',
+		fontWeight: 200,
+	},
+	errorIcon: {
+		color: '#FAFAFA',
+		fontSize: 30,
 	},
 	tableTitle: {
 		color: '#00DFDD',
 		fontSize: 20,
 		fontWeight: 400,
 	},
-	tableBody: {
-		margin: 2,
-		'& $rowBody': {
-			margin: 2,
+	tableItem: {
+		color: '#FAFAFA',
+		fontSize: 18,
+		fontWeight: 400,
+		border: 'none',
+		padding: '5px 20px',
+		'&:first-child': {
+			borderTopLeftRadius: 8,
+			borderBottomLeftRadius: 8,
+		},
+		'&:last-child': {
+			borderTopRightRadius: 8,
+			borderBottomRightRadius: 8,
 		},
 	},
-	input: {
-		color: 'white',
+	tableItemIcon: {
+		color: '#FAFAFA',
+		width: 20,
+		'&:hover': {
+			color: '#00DFDD',
+		},
 	},
-	pagination: {},
+	pagination: {
+		display: 'flex',
+		alignItems: 'center',
+		justifyContent: 'center',
+		margin: 'auto',
+		width: '85%',
+		paddingTop: 10,
+		paddingBottom: 40,
+	},
+	pageNumber: {
+		padding: 5,
+		'&:hover': {
+			color: '#00DFDD',
+		},
+	},
+	backBtn: {
+		color: '#FAFAFA',
+		borderColor: '#00DFDD',
+		'&:hover': {
+			color: '#00DFDD',
+		},
+	},
 }));
+const StyledTableRow = withStyles((theme) => ({
+	root: {
+		'&:nth-of-type(odd)': {
+			backgroundColor: 'rgba(10, 34, 45, 0.7)',
+		},
+	},
+}))(TableRow);
 
 function MainView() {
 	const classes = useStyles();
@@ -68,6 +157,7 @@ function MainView() {
 	let [loading, setLoading] = useState(false);
 	let [open, setOpen] = useState(false);
 	let [isSearching, setIsSearching] = useState(false);
+	let [searchError, setSearchError] = useState(false);
 
 	let [characterList, setCharacterList] = useState([]);
 
@@ -92,7 +182,6 @@ function MainView() {
 		}
 	};
 	const handlePageUp = async () => {
-		console.log('pageup ran', pageUp);
 		if (pageUp) {
 			const response = await axios.get(`${pageUp}`);
 			setCharacterList(response.data);
@@ -114,13 +203,14 @@ function MainView() {
 	};
 	const handleBack = () => {
 		setIsSearching(false);
+		setSearchError(false);
 		getCharacters();
 	};
-	const filteredCharacters = async (event) => {
+	const handleSubmit = async (event) => {
 		event.preventDefault();
 		setIsSearching(true);
+
 		let charToSearch = event.target[0].value;
-		console.log('event', event.target[0].value);
 		if (charToSearch) {
 			try {
 				const response = await axios.get(
@@ -136,6 +226,7 @@ function MainView() {
 				setLoading(true);
 			} catch {
 				console.log('search error');
+				setSearchError(true);
 			}
 		}
 		event.target.reset();
@@ -146,97 +237,122 @@ function MainView() {
 			{ length: characterList.info.pages },
 			(_, i) => i + 1
 		);
-		return (
-			<TableContainer component={Paper} className={classes.tableWrap}>
-				{isSearching ? (
-					<Button onClick={handleBack}>back</Button>
-				) : (
-					<div></div>
-				)}
-
-				<Table className={classes.table}>
-					<TableHead className={classes.tableHead}>
-						<TableRow className={classes.rowHead}>
-							<TableCell className={classes.tableTitle}>
-								Name
-							</TableCell>
-							<TableCell className={classes.tableTitle}>
-								Status
-							</TableCell>
-							<TableCell className={classes.tableTitle}>
-								Specie
-							</TableCell>
-							<TableCell className={classes.tableTitle}>
-								Gender
-							</TableCell>
-							<TableCell className={classes.tableTitle}>
-								Episodes
-							</TableCell>
-							<TableCell className={classes.tableTitle}>
-								Details
-							</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody className={classes.tableBody}>
-						{characterList.results.map((row) => (
-							<TableRow
-								key={row.id}
-								className={classes.rowBody}
-								style={
-									row.id % 2
-										? {
-												background:
-													'rgba(10, 34, 45, 0.7)',
-										  }
-										: {
-												background:
-													'rgba(196, 196, 196, 0.5)',
-										  }
-								}
-							>
-								<TableCell>{row.name}</TableCell>
-								<TableCell>{row.status}</TableCell>
-								<TableCell>{row.species}</TableCell>
-								<TableCell>{row.gender}</TableCell>
-								<TableCell>{row.episode.length}</TableCell>
-								<TableCell>
-									<Button onClick={() => handleOpen(row)}>
-										detalles
-									</Button>
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-				<div className={classes.pagination}>
-					<Button onClick={handlePageDown}>pageDown</Button>
-					<div>
-						{!isSearching ? (
-							<React.Fragment>
-								{paginationItemsArr.map((item) => (
-									<IconButton
-										className={classes.pageNumber}
-										size="small"
-										key={item}
-										onClick={() => setPageNumber(item)}
-									>
-										{item}
-									</IconButton>
+		const headerList = [
+			'Name',
+			'Status',
+			'Specie',
+			'Gender',
+			'Episodes',
+			'',
+		];
+		if (searchError) {
+			return (
+				<TableContainer
+					component={Paper}
+					className={classes.tableWrapError}
+				>
+					<ErrorOutlineIcon className={classes.errorIcon} />
+					<h2 className={classes.searchError}>
+						No characters found. Please try again
+					</h2>
+				</TableContainer>
+			);
+		} else {
+			return (
+				<TableContainer component={Paper} className={classes.tableWrap}>
+					<Table className={classes.table}>
+						<TableHead className={classes.tableHead}>
+							<TableRow className={classes.rowHead}>
+								{headerList.map((label) => (
+									<TableCell className={classes.tableTitle}>
+										{label}
+									</TableCell>
 								))}
-							</React.Fragment>
-						) : (
-							''
-						)}
+							</TableRow>
+						</TableHead>
+						<TableBody className={classes.tableBody}>
+							{characterList.results.map((row) => (
+								<StyledTableRow
+									key={row.id}
+									className={classes.rowBody}
+								>
+									<TableCell className={classes.tableItem}>
+										{row.name}
+									</TableCell>
+									<TableCell className={classes.tableItem}>
+										{row.status}
+									</TableCell>
+									<TableCell className={classes.tableItem}>
+										{row.species}
+									</TableCell>
+									<TableCell className={classes.tableItem}>
+										{row.gender}
+									</TableCell>
+									<TableCell
+										align="center"
+										width={40}
+										className={classes.tableItem}
+									>
+										{row.episode.length}
+									</TableCell>
+									<TableCell
+										align="right"
+										className={classes.tableItem}
+									>
+										<IconButton
+											onClick={() => handleOpen(row)}
+											className={classes.tableItemIcon}
+										>
+											<VisibilityOutlinedIcon />
+										</IconButton>
+									</TableCell>
+								</StyledTableRow>
+							))}
+						</TableBody>
+					</Table>
+					<div className={classes.pagination}>
+						<IconButton
+							className={classes.pageNumber}
+							onClick={handlePageDown}
+						>
+							<KeyboardArrowLeftIcon />
+						</IconButton>
+						<div>
+							{!isSearching ? (
+								<>
+									{paginationItemsArr.map((item) => (
+										<IconButton
+											className={classes.pageNumber}
+											style={
+												item === pageNumber
+													? { color: '#00DFDD' }
+													: {}
+											}
+											key={item}
+											onClick={() => setPageNumber(item)}
+										>
+											{item}
+										</IconButton>
+									))}
+								</>
+							) : (
+								<></>
+							)}
+						</div>
+						<IconButton
+							className={classes.pageNumber}
+							onClick={handlePageUp}
+						>
+							<KeyboardArrowRightIcon />
+						</IconButton>
 					</div>
-					<Button onClick={handlePageUp}>pageUp</Button>
-				</div>
-			</TableContainer>
-		);
+				</TableContainer>
+			);
+		}
 	};
 	const handleOpen = (char) => {
 		setOpen(true);
 		setSelectedCharacter(char);
-		console.log('curent', char);
 	};
 	const handleClose = () => {
 		setOpen(false);
@@ -244,28 +360,36 @@ function MainView() {
 
 	return (
 		<Box className={classes.MainView}>
-			<h1>rick and morty characters</h1>
+			<h1 className={classes.appTitle}>Rick and Morty characters</h1>
 			{loading ? (
 				<Box>
 					<div className={classes.search}>
-						<form
-							className={classes.form}
-							onSubmit={filteredCharacters}
-						>
+						<form className={classes.form} onSubmit={handleSubmit}>
+							<SearchIcon className={classes.inputIcon} />
 							<Input
 								placeholder="Search…"
 								className={classes.input}
 							/>
 						</form>
+						<div>
+							{isSearching ? (
+								<Button
+									className={classes.backBtn}
+									variant="outlined"
+									onClick={handleBack}
+								>
+									Back
+								</Button>
+							) : (
+								<></>
+							)}
+						</div>
 					</div>
 					<TableComponent />
-					<Modal
-						className={classes.modal}
-						open={open}
-						onClose={handleClose}
-					>
+					<Modal className={classes.modal} open={open}>
 						<CharDetails
 							characterData={selectedCharacter}
+							onClose={handleClose}
 						></CharDetails>
 					</Modal>
 				</Box>

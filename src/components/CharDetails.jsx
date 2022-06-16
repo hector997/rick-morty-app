@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import dateFormat from 'dateformat';
 import axios from 'axios';
 import {
 	Paper,
 	Box,
 	Table,
+	Button,
 	TableHead,
 	TableRow,
 	TableCell,
 	TableBody,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { CircularProgress } from '@material-ui/core';
+import { makeStyles, withStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles((theme) => ({
 	paper: {
@@ -44,24 +47,60 @@ const useStyles = makeStyles((theme) => ({
 	fieldData: {
 		margin: '10px',
 	},
+	tableWrap: {
+		width: '90%',
+		margin: 'auto',
+		background: '#C4C4C480',
+		'& $table': {
+			background: '#C4C4C40',
+			width: '90%',
+			marginTop: 20,
+			margin: 'auto',
+		},
+	},
+	table: {
+		background: '#C4C4C40',
+		marginTop: 20,
+		margin: 'auto',
+	},
 	tableContainer: {
 		height: 200,
 		width: 'auto',
 		overflowX: 'scroll',
 	},
-	table: {
-		color: '#FAFAFA',
+	titleCell: {
+		backgroundColor: '#0A222D',
+		color: '#fafafa',
+	},
+	rowWrap: {
+		'& $rowCell': {},
+	},
+	rowCell: {
+		color: '#fafafa',
 	},
 	imgDisplay: {
 		display: 'flex',
 		flexDirection: 'column',
 		alignItems: 'center',
 	},
+	btnContainer: {
+		display: 'flex',
+		justifyContent: 'center',
+		padding: 5,
+	},
+	closeBtn: {
+		color: '#FAFAFA',
+		borderColor: '#00DFDD',
+		'&:hover': {
+			color: '#00DFDD',
+		},
+	},
 }));
 
-const Modal = ({ characterData }) => {
+const Modal = ({ characterData, onClose }) => {
 	const classes = useStyles();
 	const [episodeList, setEpisodeList] = useState([]);
+	let [isLoading, setIsLoading] = useState(false);
 	useEffect(() => {
 		getEpisodeData();
 	}, []);
@@ -71,59 +110,90 @@ const Modal = ({ characterData }) => {
 		characterData.episode.forEach((element) => {
 			let episodeNumber = element.match(/\d+/)[0];
 			episodeArr.push(episodeNumber);
-			console.log('arr', episodeArr);
 		});
 		try {
 			const response = await axios.get(
 				`https://rickandmortyapi.com/api/episode/${episodeArr}`
 			);
-			console.log(response.data);
 			setEpisodeList(response.data);
+			isLoading(true);
 		} catch {
 			console.log('error loading episodes');
 		}
 	};
+	const DateFormat = (date) => {};
 	const EpisodeTable = () => {
-		return (
-			<Table className={classes.table}>
-				<TableHead>
-					<TableRow>
-						<TableCell>Episode</TableCell>
-						<TableCell align="right">Code</TableCell>
-						<TableCell align="right">Air Date</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{episodeList.length > 1 ? (
-						episodeList.map((row) => (
-							<TableRow key={row.id}>
-								<TableCell component="th" scope="row">
-									{row.name}
-								</TableCell>
-								<TableCell align="right">
-									{row.episode}
-								</TableCell>
-								<TableCell align="right">
-									{row.air_date}
-								</TableCell>
+		const headerList = ['Episode', 'Code', 'Air date'];
+		if (isLoading) {
+			return <CircularProgress style={{ marginTop: 40 }} />;
+		} else {
+			return (
+				<>
+					<Table stickyHeader className={classes.table}>
+						<TableHead>
+							<TableRow>
+								{headerList.map((label) => (
+									<TableCell className={classes.titleCell}>
+										{label}
+									</TableCell>
+								))}
 							</TableRow>
-						))
-					) : (
-						<TableRow key={episodeList.id}>
-							<TableCell component="th" scope="row">
-								{episodeList.name}
-							</TableCell>
-							<TableCell align="right">
-								{episodeList.episode}
-							</TableCell>
-							<TableCell align="right">
-								{episodeList.air_date}
-							</TableCell>
-						</TableRow>
-					)}
-				</TableBody>
-			</Table>
-		);
+						</TableHead>
+						<TableBody>
+							{episodeList.length > 1 ? (
+								episodeList.map((row) => (
+									<TableRow
+										key={row.id}
+										style={
+											row.id % 2
+												? { background: '#0A222D' }
+												: { background: '#C4C4C480' }
+										}
+									>
+										<TableCell
+											className={classes.rowCell}
+											style={{ width: 200 }}
+										>
+											{row.name}
+										</TableCell>
+										<TableCell className={classes.rowCell}>
+											{row.episode}
+										</TableCell>
+										<TableCell className={classes.rowCell}>
+											{dateFormat(
+												row.air_date,
+												'dd-m-yy'
+											)}
+										</TableCell>
+									</TableRow>
+								))
+							) : (
+								<TableRow
+									key={episodeList.id}
+									style={{ background: '#C4C4C480' }}
+								>
+									<TableCell
+										className={classes.rowCell}
+										style={{ width: 150 }}
+									>
+										{episodeList.name}
+									</TableCell>
+									<TableCell lassName={classes.rowCell}>
+										{episodeList.episode}
+									</TableCell>
+									<TableCell
+										lassName={classes.rowCell}
+										align="right"
+									>
+										{episodeList.air_date}
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
+				</>
+			);
+		}
 	};
 	return (
 		<div>
@@ -187,6 +257,15 @@ const Modal = ({ characterData }) => {
 				<Box className={classes.tableContainer}>
 					<EpisodeTable />
 				</Box>
+				<footer className={classes.btnContainer}>
+					<Button
+						variant="outlined"
+						className={classes.closeBtn}
+						onClick={onClose}
+					>
+						Close
+					</Button>
+				</footer>
 			</Paper>
 		</div>
 	);
