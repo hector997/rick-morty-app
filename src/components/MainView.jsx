@@ -15,20 +15,49 @@ import TableRow from '@material-ui/core/TableRow';
 import CharDetails from './CharDetails';
 
 const useStyles = makeStyles((theme) => ({
+	MainView: {
+		position: 'absolute',
+		width: '100%',
+		backgroundColor: '#0A222D',
+	},
+	form: {
+		width: '20%',
+		padding: 20,
+	},
 	search: {
 		position: 'relative',
+		left: 0,
 		borderRadius: theme.shape.borderRadius,
-		backgroundColor: theme.palette.common.white,
-		'&:hover': {
-			backgroundColor: theme.palette.common.white,
-		},
-		marginRight: theme.spacing(2),
-		marginLeft: 0,
-		width: '100%',
 		[theme.breakpoints.up('sm')]: {
 			marginLeft: theme.spacing(3),
 			width: 'auto',
 		},
+	},
+	tableWrap: {
+		width: '95%',
+		margin: 'auto',
+		background: '#C4C4C480',
+		borderRadius: 10,
+		'& $table': {
+			background: '#C4C4C40',
+			width: '95%',
+			marginTop: 20,
+			margin: 'auto',
+		},
+	},
+	tableTitle: {
+		color: '#00DFDD',
+		fontSize: 20,
+		fontWeight: 400,
+	},
+	tableBody: {
+		margin: 2,
+		'& $rowBody': {
+			margin: 2,
+		},
+	},
+	input: {
+		color: 'white',
 	},
 	pagination: {},
 }));
@@ -36,11 +65,13 @@ const useStyles = makeStyles((theme) => ({
 function MainView() {
 	const classes = useStyles();
 
-	const [loading, setLoading] = useState(false);
-	let [characterList, setCharacterList] = useState([]);
-	let [selectedCharacter, setSelectedCharacter] = useState(null);
-	const [open, setOpen] = useState(false);
+	let [loading, setLoading] = useState(false);
+	let [open, setOpen] = useState(false);
+	let [isSearching, setIsSearching] = useState(false);
 
+	let [characterList, setCharacterList] = useState([]);
+
+	let [selectedCharacter, setSelectedCharacter] = useState(null);
 	let [pageNumber, setPageNumber] = useState(1);
 	let [pageUp, setPageUp] = useState(null);
 	let [pageDown, setPageDown] = useState(null);
@@ -68,6 +99,7 @@ function MainView() {
 			response.data.info.next
 				? setPageUp(response.data.info.next)
 				: setPageUp(null);
+			setLoading(true);
 		}
 	};
 	const handlePageDown = async () => {
@@ -77,10 +109,16 @@ function MainView() {
 			response.data.info.prev
 				? setPageDown(response.data.info.prev)
 				: setPageDown(null);
+			setLoading(true);
 		}
+	};
+	const handleBack = () => {
+		setIsSearching(false);
+		getCharacters();
 	};
 	const filteredCharacters = async (event) => {
 		event.preventDefault();
+		setIsSearching(true);
 		let charToSearch = event.target[0].value;
 		console.log('event', event.target[0].value);
 		if (charToSearch) {
@@ -95,100 +133,104 @@ function MainView() {
 					? setPageDown(response.data.info.prev)
 					: setPageDown(null);
 				setCharacterList(response.data);
+				setLoading(true);
 			} catch {
 				console.log('search error');
 			}
 		}
+		event.target.reset();
 	};
-	const SearchBar = () => {
-		return (
-			<div className={classes.search}>
-				<form onSubmit={filteredCharacters}>
-					<Input
-						placeholder="Search…"
-						className={classes.inputRoot}
-					/>
-				</form>
-			</div>
-		);
-	};
-	const Pagination = () => {
-		let pageNumbersArr = Array.from(
+
+	const TableComponent = () => {
+		let paginationItemsArr = Array.from(
 			{ length: characterList.info.pages },
 			(_, i) => i + 1
 		);
-		if (pageNumbersArr.length > 40) {
-			//mejorar como diferenciar entre la lista por defecto y una busqueda personalizada
-			//para no mostrar los numeros de la paginacion ya que la api no permite ingresar un
-			//parametro de busqueda con un numer de pagina al mismo tiempo
-
-			return (
-				<React.Fragment>
-					{pageNumbersArr.map((item) => (
-						<IconButton
-							className={classes.pageNumber}
-							size="small"
-							key={item}
-							onClick={() => setPageNumber(item)}
-						>
-							{item}
-						</IconButton>
-					))}
-				</React.Fragment>
-			);
-		} else {
-			return null;
-		}
-	};
-	const TableComponent = () => {
 		return (
-			<React.Fragment>
-				<TableContainer component={Paper}>
-					<Table className={classes.table}>
-						<TableHead>
-							<TableRow>
-								<TableCell>Nombre</TableCell>
-								<TableCell align="right">Status</TableCell>
-								<TableCell align="right">Specie</TableCell>
-								<TableCell align="right">Gender</TableCell>
-								<TableCell align="right">Episodes</TableCell>
-								<TableCell align="right">Details</TableCell>
+			<TableContainer component={Paper} className={classes.tableWrap}>
+				{isSearching ? (
+					<Button onClick={handleBack}>back</Button>
+				) : (
+					<div></div>
+				)}
+
+				<Table className={classes.table}>
+					<TableHead className={classes.tableHead}>
+						<TableRow className={classes.rowHead}>
+							<TableCell className={classes.tableTitle}>
+								Name
+							</TableCell>
+							<TableCell className={classes.tableTitle}>
+								Status
+							</TableCell>
+							<TableCell className={classes.tableTitle}>
+								Specie
+							</TableCell>
+							<TableCell className={classes.tableTitle}>
+								Gender
+							</TableCell>
+							<TableCell className={classes.tableTitle}>
+								Episodes
+							</TableCell>
+							<TableCell className={classes.tableTitle}>
+								Details
+							</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody className={classes.tableBody}>
+						{characterList.results.map((row) => (
+							<TableRow
+								key={row.id}
+								className={classes.rowBody}
+								style={
+									row.id % 2
+										? {
+												background:
+													'rgba(10, 34, 45, 0.7)',
+										  }
+										: {
+												background:
+													'rgba(196, 196, 196, 0.5)',
+										  }
+								}
+							>
+								<TableCell>{row.name}</TableCell>
+								<TableCell>{row.status}</TableCell>
+								<TableCell>{row.species}</TableCell>
+								<TableCell>{row.gender}</TableCell>
+								<TableCell>{row.episode.length}</TableCell>
+								<TableCell>
+									<Button onClick={() => handleOpen(row)}>
+										detalles
+									</Button>
+								</TableCell>
 							</TableRow>
-						</TableHead>
-						<TableBody>
-							{characterList.results.map((row) => (
-								<TableRow key={row.id}>
-									<TableCell component="th" scope="row">
-										{row.name}
-									</TableCell>
-									<TableCell align="right">
-										{row.status}
-									</TableCell>
-									<TableCell align="right">
-										{row.specie}
-									</TableCell>
-									<TableCell align="right">
-										{row.gender}
-									</TableCell>
-									<TableCell align="right">
-										{row.episode.length}
-									</TableCell>
-									<TableCell align="right">
-										<Button onClick={() => handleOpen(row)}>
-											detalles
-										</Button>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-					<div className={classes.pagination}>
-						<Button onClick={handlePageDown}>pageDown</Button>
-						<Pagination />
-						<Button onClick={handlePageUp}>pageUp</Button>
+						))}
+					</TableBody>
+				</Table>
+				<div className={classes.pagination}>
+					<Button onClick={handlePageDown}>pageDown</Button>
+					<div>
+						{!isSearching ? (
+							<React.Fragment>
+								{paginationItemsArr.map((item) => (
+									<IconButton
+										className={classes.pageNumber}
+										size="small"
+										key={item}
+										onClick={() => setPageNumber(item)}
+									>
+										{item}
+									</IconButton>
+								))}
+							</React.Fragment>
+						) : (
+							''
+						)}
 					</div>
-				</TableContainer>
-			</React.Fragment>
+					<Button onClick={handlePageUp}>pageUp</Button>
+				</div>
+			</TableContainer>
 		);
 	};
 	const handleOpen = (char) => {
@@ -199,29 +241,37 @@ function MainView() {
 	const handleClose = () => {
 		setOpen(false);
 	};
-	function ModalDisplay() {
-		return <CharDetails characterData={selectedCharacter}></CharDetails>;
-	}
+
 	return (
 		<Box className={classes.MainView}>
-			<p>rick and morty characters</p>
-			<Box>
-				{loading ? (
-					<Box>
-						<SearchBar />
-						<TableComponent />
-						<Modal
-							className={classes.modal}
-							open={open}
-							onClose={handleClose}
+			<h1>rick and morty characters</h1>
+			{loading ? (
+				<Box>
+					<div className={classes.search}>
+						<form
+							className={classes.form}
+							onSubmit={filteredCharacters}
 						>
-							<ModalDisplay />
-						</Modal>
-					</Box>
-				) : (
-					<CircularProgress style={{ marginTop: 40 }} />
-				)}
-			</Box>
+							<Input
+								placeholder="Search…"
+								className={classes.input}
+							/>
+						</form>
+					</div>
+					<TableComponent />
+					<Modal
+						className={classes.modal}
+						open={open}
+						onClose={handleClose}
+					>
+						<CharDetails
+							characterData={selectedCharacter}
+						></CharDetails>
+					</Modal>
+				</Box>
+			) : (
+				<CircularProgress style={{ marginTop: 40 }} />
+			)}
 		</Box>
 	);
 }
