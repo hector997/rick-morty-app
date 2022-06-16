@@ -26,6 +26,9 @@ const useStyles = makeStyles((theme) => ({
 		width: '100%',
 		backgroundColor: '#0A222D',
 		paddingTop: 30,
+		[theme.breakpoints.down('sm')]: {
+			zoom: 0.5,
+		},
 	},
 	appTitle: {
 		color: '#00DFDD',
@@ -81,6 +84,9 @@ const useStyles = makeStyles((theme) => ({
 		display: 'flex',
 		justifyContent: 'center',
 		alignItems: 'center',
+		[theme.breakpoints.down('sm')]: {
+			height: '1200px',
+		},
 	},
 	searchError: {
 		paddingLeft: 10,
@@ -127,7 +133,8 @@ const useStyles = makeStyles((theme) => ({
 		margin: 'auto',
 		width: '85%',
 		paddingTop: 10,
-		paddingBottom: 40,
+		paddingBottom: 60,
+		zoom: 0.8,
 	},
 	pageNumber: {
 		padding: 5,

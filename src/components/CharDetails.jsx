@@ -28,6 +28,10 @@ const useStyles = makeStyles((theme) => ({
 		left: '50%',
 		transform: 'translate(-50%, -50%)',
 		width: 500,
+		[theme.breakpoints.down('sm')]: {
+			zoom: 0.7,
+			width: 350,
+		},
 	},
 	image: {
 		width: 120,
